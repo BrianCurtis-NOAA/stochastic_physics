@@ -1,3 +1,14 @@
+cmake_minimum_required(VERSION 3.19)
+
+project(stochastic_physics
+        VERSION 1.0
+	LANGUAGES C Fortran)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules/Modules)
+
+find_package(FMS 2022.04 REQUIRED COMPONENTS R4 R8)
+find_package(OpenMP REQUIRED)
+
 if(CCPP_32BIT)
   message(STATUS "Compile stochastic_physics with 32-bit precision to match CCPP slow physics.")
   add_definitions(-DCCPP_32BIT)
@@ -46,7 +57,15 @@ list(APPEND _stoch_phys_srcs
 )
 
 add_library(stochastic_physics ${_stoch_phys_srcs})
-add_dependencies(stochastic_physics fms)
+
+if(32BIT)
+  target_link_libraries(stochastic_physics PUBLIC FMS::fms_r4)
+  add_dependencies(stochastic_physics FMS::fms_r4)
+else() 
+  target_link_libraries(stochastic_physics PUBLIC FMS::fms_r8)
+  add_dependencies(stochastic_physics FMS::fms_r8)
+endif()
+
 
 if(32BIT)
   target_compile_definitions(stochastic_physics PRIVATE INTERNAL_FILE_NML OVERLOAD_R4)
@@ -57,8 +76,6 @@ endif()
 set_target_properties(stochastic_physics PROPERTIES Fortran_MODULE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mod)
 target_include_directories(stochastic_physics INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/mod>
                                                         $<INSTALL_INTERFACE:mod>)
-
-target_link_libraries(stochastic_physics PUBLIC fms)
 if(OPENMP)
   target_link_libraries(stochastic_physics PRIVATE OpenMP::OpenMP_Fortran)
 endif()
